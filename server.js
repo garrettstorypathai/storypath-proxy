@@ -100,6 +100,34 @@ app.post('/proxy', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Proxy server listening on http://localhost:${PORT} | POST /perplexity -> ${TARGET_URL}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Proxy server listening on http://0.0.0.0:${PORT} | POST /perplexity -> ${TARGET_URL}`);
+});
+
+// Ensure the server keeps the event loop active
+if (server && typeof server.ref === 'function') server.ref();
+
+// Helpful diagnostics if the process exits unexpectedly
+server.on('error', (err) => {
+  console.error('HTTP server error:', err);
+});
+server.on('close', () => {
+  console.warn('HTTP server closed');
+});
+
+process.on('SIGINT', () => {
+  console.warn('Received SIGINT, shutting down...');
+  server.close(() => process.exit(0));
+});
+process.on('SIGTERM', () => {
+  console.warn('Received SIGTERM, shutting down...');
+  server.close(() => process.exit(0));
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+  process.exit(1);
 });
